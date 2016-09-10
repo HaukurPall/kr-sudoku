@@ -1,0 +1,17 @@
+numpy
+minisat
+    wget http://minisat.se/downloads/MiniSat_v1.14_linux
+    sudo mv MiniSat_v1.14_linux /usr/local/bin/minisat
+    chmod +x /usr/local/bin/minisat)
+
+lingeling
+    wget http://fmv.jku.at/lingeling/lingeling-bbc-9230380-160707.tar.gz
+    tar xvf Downloads/lingeling-bbc-9230380-160707.tar.gz
+    sudo mv lingeling-bbc-9230380-160707 /usr/local/lingeling
+    cd /usr/local/lingeling
+    ./configure.sh && make
+    cd /usr/local/bin
+    sudo ln -s /usr/local/lingeling/lingeling lingeling
+
+
+satispy
