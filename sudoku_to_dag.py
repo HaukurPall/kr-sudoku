@@ -67,8 +67,8 @@ class Sudoku:
     # Row first then columns
     grid = []
 
-    # initialize empty sudoku
-    def __init__(self):
+    # initialize a sudoku
+    def __init__(self, sudoku):
         self.grid.insert(0, {})
         for i in range(1, self.SIZE + 1):
             row = [{}]
@@ -76,6 +76,12 @@ class Sudoku:
                 cell = Cell(i, j, self)
                 row.insert(j, cell)
             self.grid.insert(i, row)
+        # we add all the values given, if any
+        if sudoku:
+            for row_index, row_array in enumerate(sudoku):
+                for column_index, number in enumerate(row_array):
+                    if number != 0:
+                        self.insert_number(row_index + 1, column_index + 1, number)
 
     # insert number 'number' on row 'row' and column 'column'
     def insert_number(self, row, column, number):
@@ -119,6 +125,13 @@ class Sudoku:
             for j in range(1, self.SIZE + 1):
                 self.grid[i][j].print_possibilities()
             print
+
+    def count_all_possibilities(self):
+        all_possibilites = 0
+        for i in range(1, self.SIZE + 1):
+            for j in range(1, self.SIZE + 1):
+                all_possibilites += len(self.grid[i][j].get_possibilities())
+        return all_possibilites
 
     def check_trivials(self):
         self.check_rows()
