@@ -1,3 +1,6 @@
+from graph_tool.all import *
+import matplotlib
+
 class Cell:
     # set of possible values
     values = []
@@ -251,6 +254,9 @@ class SudokuNodeManager:
     def get_nodes_number(self):
         return len(self.sudoku_nodes.keys())
 
+    def get_sudoku_node(self, key):
+        return self.sudoku_nodes[key]
+
     def add_incorrect_solution(self):
         self.incorrect_solutions_count += 1
 
@@ -290,12 +296,14 @@ class SudokuNode:
     def __init__(self, sudoku, sudoku_manager):
         self.sudoku = sudoku
         self.sudoku_manager = sudoku_manager
+        self.paths = {"incorrect": []}
 
     def encode(self):
         return self.sudoku.encode()
 
     def compute(self):
-        if not self.sudoku.is_complete():
+        computed = self.sudoku_manager.add_sudoku_node(self)
+        if not computed:
             for i in range(1, self.sudoku.SIZE):
                 for j in range(1, self.sudoku.SIZE):
                     possibilities = self.sudoku.grid[i][j].get_possibilities()
@@ -306,50 +314,80 @@ class SudokuNode:
                             try:
                                 sudoku.insert_number(i, j, possibility)
                                 sudoku_node = SudokuNode(sudoku, self.sudoku_manager)
-                                computed = self.sudoku_manager.add_sudoku_node(sudoku_node)
-                                if not computed:
-                                    sudoku_node.compute()
-                                    self.sudoku_manager.add_sudoku_node(sudoku_node)
-                                else:
-                                    sudoku_node = computed
+                                key = sudoku.encode()
+                                if key not in self.paths.keys():
+                                    self.paths[key] = []
+                                self.paths[key].append(Move(i, j, possibility))
+                                sudoku_node.compute()
+
                             except:
                                 self.sudoku_manager.add_incorrect_solution()
-                            finally:
-                                self.paths[Move(i, j, possibility)] = sudoku_node
-        else:
-            self.sudoku_manager.add_sudoku_node(self)
+
+
 
     def print_graph(self):
-        print self.paths
+        graph = Graph()
+
+        node_map = {}
+        for node in self.sudoku_manager.sudoku_nodes:
+            node_map[node] = graph.add_vertex()
+
+        nodes = [self]
+        visited = set()
+        edges = set()
+        while len(nodes) > 0:
+            print len(nodes)
+            node = nodes.pop()
+            for key in self.paths.keys():
+                link_from = node.sudoku.encode()
+                link_to = key
+                if (link_from, link_to) not in edges:
+                    if link_to in node_map.keys():
+                        graph.add_edge(node_map[link_from], node_map[link_to])
+                        edges.add((link_from, link_to))
+                        if link_to not in visited:
+                            nodes.append(self.sudoku_manager.get_sudoku_node(link_to))
+                            visited.add(link_to)
+                    else:
+                        fail = graph.add_vertex()
+                        graph.add_edge(node_map[link_from], fail)
+                        pass
+
+
+                else:
+                    pass
+
+        print "here"
+        graph_draw(graph, output_size=(1000, 1000), vertex_text=graph.vertex_index, output="graph.png")
 
 
 def sudoku_to_dag(input_sudoku):
     sudoku_node_manager = SudokuNodeManager()
 
     sudoku = Sudoku()
-    #sudoku.insert_number(1, 1, 7)
+    sudoku.insert_number(1, 1, 7)
     sudoku.insert_number(1, 2, 1)
-    #sudoku.insert_number(1, 3, 6)
+    sudoku.insert_number(1, 3, 6)
     sudoku.insert_number(1, 6, 8)
-    #sudoku.insert_number(1, 9, 9)
+    sudoku.insert_number(1, 9, 9)
 
-    #sudoku.insert_number(2, 5, 9)
+    sudoku.insert_number(2, 5, 9)
     sudoku.insert_number(2, 6, 5)
     sudoku.insert_number(2, 7, 6)
     sudoku.insert_number(2, 8, 7)
 
     sudoku.insert_number(3, 1, 5)
-    #sudoku.insert_number(3, 2, 9)
+    sudoku.insert_number(3, 2, 9)
     sudoku.insert_number(3, 8, 3)
     sudoku.insert_number(3, 9, 4)
 
     sudoku.insert_number(4, 1, 1)
-    #sudoku.insert_number(4, 4, 9)
+    sudoku.insert_number(4, 4, 9)
     sudoku.insert_number(4, 6, 6)
-    #sudoku.insert_number(4, 7, 7)
+    sudoku.insert_number(4, 7, 7)
     sudoku.insert_number(4, 9, 3)
 
-    sudoku.insert_number(5, 1, 9)
+    #sudoku.insert_number(5, 1, 9)
     sudoku.insert_number(5, 4, 1)
     sudoku.insert_number(5, 7, 5)
     sudoku.insert_number(5, 8, 2)
@@ -373,12 +411,14 @@ def sudoku_to_dag(input_sudoku):
     sudoku_node = SudokuNode(sudoku, sudoku_node_manager)
     sudoku_node.compute()
 
-    sudoku_node.print_graph()
+
 
     print ("There are {} correct solutions, {} intermediate nodes and {} incorrect possibilities".format(
         sudoku_node_manager.get_correct_soultuins_count(),
         sudoku_node_manager.get_nodes_number(),
         sudoku_node_manager.get_incorrect_solutions_count()))
+
+    sudoku_node.print_graph()
 
 
 if __name__ == "__main__":
