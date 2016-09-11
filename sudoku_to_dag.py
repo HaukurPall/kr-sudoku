@@ -67,7 +67,7 @@ class Cell:
 
     def get_state(self):
         if not self.is_fixed():
-            return '?'
+            return '?-'
         else:
             return str(self.final_value) + '-'
 
@@ -296,21 +296,20 @@ class SudokuNode:
     def __init__(self, sudoku, sudoku_manager):
         self.sudoku = sudoku
         self.sudoku_manager = sudoku_manager
-        self.paths = {"incorrect": []}
+        self.paths = {}
 
     def encode(self):
         return self.sudoku.encode()
 
     def compute(self):
         computed = self.sudoku_manager.add_sudoku_node(self)
-        if not computed:
+        if not computed and not self.sudoku.is_complete():
             for i in range(1, self.sudoku.SIZE):
                 for j in range(1, self.sudoku.SIZE):
                     possibilities = self.sudoku.grid[i][j].get_possibilities()
                     if len(possibilities) > 1:
                         for possibility in possibilities:
                             sudoku = self.sudoku.create_copy()
-                            sudoku_node = {}
                             try:
                                 sudoku.insert_number(i, j, possibility)
                                 sudoku_node = SudokuNode(sudoku, self.sudoku_manager)
@@ -319,7 +318,6 @@ class SudokuNode:
                                     self.paths[key] = []
                                 self.paths[key].append(Move(i, j, possibility))
                                 sudoku_node.compute()
-
                             except:
                                 self.sudoku_manager.add_incorrect_solution()
 
@@ -327,38 +325,51 @@ class SudokuNode:
 
     def print_graph(self):
         graph = Graph()
+        vprop_color_fill = graph.new_vertex_property("vector<double>")
+        vprop_shape = graph.new_vertex_property("string")
 
         node_map = {}
         for node in self.sudoku_manager.sudoku_nodes:
             node_map[node] = graph.add_vertex()
+            vprop_shape[node_map[node]] = "circle"
+            if self.sudoku_manager.get_sudoku_node(node).sudoku.is_complete():
+                vprop_color_fill[node_map[node]] = [0.5,1,0.5,0.9]
+            elif len(self.sudoku_manager.get_sudoku_node(node).paths)==0:
+                vprop_color_fill[node_map[node]] = [1, 0.5, 0.5, 0.9]
+            else:
+                vprop_color_fill[node_map[node]] = [1, 1, 1, 0.9]
+
+
+
+        vprop_shape[node_map[self.encode()]] = "double_circle"
+        vprop_color_fill[node_map[self.encode()]] = [1, 1, 1, 0.9]
 
         nodes = [self]
         visited = set()
-        edges = set()
+
         while len(nodes) > 0:
-            print len(nodes)
             node = nodes.pop()
-            for key in self.paths.keys():
-                link_from = node.sudoku.encode()
+            link_from = node.sudoku.encode()
+            for key in node.paths.keys():
                 link_to = key
-                if (link_from, link_to) not in edges:
-                    if link_to in node_map.keys():
-                        graph.add_edge(node_map[link_from], node_map[link_to])
-                        edges.add((link_from, link_to))
-                        if link_to not in visited:
-                            nodes.append(self.sudoku_manager.get_sudoku_node(link_to))
-                            visited.add(link_to)
-                    else:
-                        fail = graph.add_vertex()
-                        graph.add_edge(node_map[link_from], fail)
-                        pass
-
-
+                if link_to in node_map.keys():
+                    graph.add_edge(node_map[link_from], node_map[link_to])
+                    if link_to not in visited:
+                        nodes.append(self.sudoku_manager.get_sudoku_node(link_to))
+                        visited.add(link_to)
                 else:
                     pass
 
-        print "here"
-        graph_draw(graph, output_size=(1000, 1000), vertex_text=graph.vertex_index, output="graph.png")
+        graph.vertex_properties["color_fill"]=vprop_color_fill
+        graph.vertex_properties["shape"]=vprop_shape
+        graph_draw(graph, output_size=(1000, 1000),
+               vertex_text=graph.vertex_index,
+               vertex_font_size=30,
+               vertex_fill_color=graph.vertex_properties["color_fill"],
+               vertex_shape=graph.vertex_properties["shape"],
+               vertex_color=[0,0,0,0.9],
+               output="graph.png")
+
 
 
 def sudoku_to_dag(input_sudoku):
@@ -367,7 +378,7 @@ def sudoku_to_dag(input_sudoku):
     sudoku = Sudoku()
     sudoku.insert_number(1, 1, 7)
     sudoku.insert_number(1, 2, 1)
-    sudoku.insert_number(1, 3, 6)
+    sudoku.insert_number(1, 3, 6)##
     sudoku.insert_number(1, 6, 8)
     sudoku.insert_number(1, 9, 9)
 
@@ -387,31 +398,29 @@ def sudoku_to_dag(input_sudoku):
     sudoku.insert_number(4, 7, 7)
     sudoku.insert_number(4, 9, 3)
 
-    #sudoku.insert_number(5, 1, 9)
-    sudoku.insert_number(5, 4, 1)
+    sudoku.insert_number(5, 1, 9)#
+    sudoku.insert_number(5, 4, 1)##
     sudoku.insert_number(5, 7, 5)
-    sudoku.insert_number(5, 8, 2)
+    sudoku.insert_number(5, 8, 2)#
 
-    sudoku.insert_number(6, 2, 2)
-    sudoku.insert_number(6, 3, 7)
+    sudoku.insert_number(6, 2, 2)#
+    sudoku.insert_number(6, 3, 7)#
     sudoku.insert_number(6, 4, 5)
-    sudoku.insert_number(6, 5, 8)
-    sudoku.insert_number(6, 7, 1)
+    sudoku.insert_number(6, 5, 8)##
+    sudoku.insert_number(6, 7, 1)#
 
     sudoku.insert_number(7, 3, 1)
-    sudoku.insert_number(7, 4, 3)
-    sudoku.insert_number(7, 5, 7)
-    sudoku.insert_number(7, 6, 9)
+    sudoku.insert_number(7, 4, 3)###
+    sudoku.insert_number(7, 5, 7)#####
+    sudoku.insert_number(7, 6, 9)#
     sudoku.insert_number(7, 8, 8)
 
-    sudoku.insert_number(8, 1, 8)
+    sudoku.insert_number(8, 1, 8)#
 
     sudoku.print_possibilities()
 
     sudoku_node = SudokuNode(sudoku, sudoku_node_manager)
     sudoku_node.compute()
-
-
 
     print ("There are {} correct solutions, {} intermediate nodes and {} incorrect possibilities".format(
         sudoku_node_manager.get_correct_soultuins_count(),
